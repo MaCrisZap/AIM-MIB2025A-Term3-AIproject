@@ -1,0 +1,76 @@
+import streamlit as st
+import joblib
+import numpy as np
+import shap
+import matplotlib.pyplot as plt
+
+# Load the trained model
+model = joblib.load('best_model.pkl')
+
+# Load data for SHAP analysis
+file_path = r'C:\Users\ZAPANTA\Downloads\AIM-MIB2025A-AIProject\AIM-MIB2025A-AIProject\KAGGLE Spotify Tracks Dataset\Kaggle_Spotify_Tracks_Dataset.csv'
+data = pd.read_csv(file_path)
+
+# Data Preprocessing for SHAP
+features = ['danceability', 'energy', 'key', 'loudness', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo']
+X = data[features]
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+explainer = shap.Explainer(model, X)
+shap_values = explainer(X)
+
+# Function to make predictions
+def make_prediction(input_data):
+    input_array = np.array(input_data).reshape(1, -1)
+    prediction = model.predict(input_array)
+    return prediction[0]
+
+# Streamlit app
+st.title('Spotify Song Popularity Prediction')
+
+# Define input fields
+st.sidebar.header('Input Features')
+danceability = st.sidebar.slider('Danceability', 0.0, 1.0, 0.5)
+energy = st.sidebar.slider('Energy', 0.0, 1.0, 0.5)
+key = st.sidebar.slider('Key', 0, 11, 5)
+loudness = st.sidebar.slider('Loudness', -60.0, 0.0, -30.0)
+speechiness = st.sidebar.slider('Speechiness', 0.0, 1.0, 0.5)
+acousticness = st.sidebar.slider('Acousticness', 0.0, 1.0, 0.5)
+instrumentalness = st.sidebar.slider('Instrumentalness', 0.0, 1.0, 0.5)
+liveness = st.sidebar.slider('Liveness', 0.0, 1.0, 0.5)
+valence = st.sidebar.slider('Valence', 0.0, 1.0, 0.5)
+tempo = st.sidebar.slider('Tempo', 0.0, 250.0, 120.0)
+
+# Collect input data
+input_data = [danceability, energy, key, loudness, speechiness, acousticness, instrumentalness, liveness, valence, tempo]
+
+# Display input values
+st.subheader('Input Values')
+st.write(f"Danceability: {danceability}")
+st.write(f"Energy: {energy}")
+st.write(f"Key: {key}")
+st.write(f"Loudness: {loudness}")
+st.write(f"Speechiness: {speechiness}")
+st.write(f"Acousticness: {acousticness}")
+st.write(f"Instrumentalness: {instrumentalness}")
+st.write(f"Liveness: {liveness}")
+st.write(f"Valence: {valence}")
+st.write(f"Tempo: {tempo}")
+
+# Make and display prediction
+if st.button('Predict Popularity'):
+    prediction = make_prediction(input_data)
+    st.subheader('Prediction')
+    if prediction == 0:
+        st.write('The song is predicted to be **undiscovered**.')
+    elif prediction == 1:
+        st.write('The song is predicted to be **rising**.')
+    else:
+        st.write('The song is predicted to be a **hit**.')
+
+    # SHAP explanation for the prediction
+    st.subheader('SHAP Explanation')
+    input_array = np.array(input_data).reshape(1, -1)
+    shap_value = explainer(input_array)
+    shap.waterfall_plot(shap_value[0], feature_names=features)
+    st.pyplot(bbox_inches='tight')
